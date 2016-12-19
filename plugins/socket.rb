@@ -17,8 +17,8 @@ class SocketPlugin < Plugin
 end
 
 class SocketService
-	Inject(:application, Application)
-	Inject(:onInject)
+	inject :application, Application
+	inject :onInject
 
 	def initialize
 		@socket = SocketClient.new *ServerIP::CENTER, CenterHandler
@@ -67,6 +67,6 @@ module PacketMsgID
 end
 
 module PacketHandler include DelegateMixin
-	Inject(:socketService, SocketService)
+	inject :socketService, SocketService
 	delegate :send_packet, :@socketService
 end

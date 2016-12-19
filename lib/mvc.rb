@@ -85,8 +85,8 @@ class Application include Controller
 end
 
 class Plugin include Model, Controller
-	Inject(:application, Application)
-	Inject(:onInit)
+	inject :application, Application
+	inject :onInit
 
 	def initialize
 		@injector = Injector.new
