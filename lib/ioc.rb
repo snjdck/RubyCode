@@ -1,5 +1,12 @@
+class Array
+	def new
+		cls, *args = self
+		cls.new *args
+	end
+end
+
 class Module
-	def Inject(name, type=nil)
+	def inject(name, type=nil)
 		info = Injector.getInjectInfo(self)
 		if type
 			info[:"@#{name}"] = type
