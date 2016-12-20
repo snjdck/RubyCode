@@ -6,10 +6,11 @@ class Array
 end
 
 class Module
-	def inject(name, type=nil)
+	def inject(name, type=nil, id=nil)
 		info = Injector.getInjectInfo(self)
-		key = type ? :"@#{name}" : name
-		info[key] = type
+		unless type then info[name] = nil
+		else info[:"@#{name}"] = [type, id]
+		end
 		name
 	end
 end
@@ -20,7 +21,7 @@ class InjectionTypeValue
 		@value  = value
 		@needInject = needInject
 	end
-	def getValue(injector, id)
+	def getValue(injector, id, target)
 		return @value unless @needInject
 		@needInject = false
 		@realInjector.injectInto(@value)
@@ -32,7 +33,7 @@ class InjectionTypeSingleton
 		@realInjector = realInjector
 		@klass = klass
 	end
-	def getValue(injector, id)
+	def getValue(injector, id, target)
 		return @value if @value
 		@value = @klass.new
 		@realInjector.injectInto(@value)
@@ -44,7 +45,7 @@ class InjectionTypeClass
 		@realInjector = realInjector
 		@klass = klass
 	end
-	def getValue(injector, id)
+	def getValue(injector, id, target)
 		@realInjector.injectInto(@klass.new)
 	end
 end
@@ -90,19 +91,17 @@ class Injector
 		mapRule(type, rule, id)
 	end
 
-	def getInstance(type, id=nil)
-		rule = getRule(calcKey(type, id), true)
-		return rule.getValue(self, id) if rule
-		rule = getRule(calcMetaKey(type), true)
-		return rule.getValue(self, id) if rule
+	def getInstance(type, id=nil, target=nil)
+		rule = getRule(calcKey(type, id)) || getRule(calcMetaKey(type))
+		return rule.getValue(self, id, target) if rule
 	end
 
 	def injectInto(target)
-		for cls in target.class.ancestors 
+		for cls in target.class.ancestors
 			next unless info = @@InjectInfoDict[cls]
 			for k, v in info
 				next unless v
-				target.instance_variable_set(k, getInstance(v))
+				target.instance_variable_set(k, getInstance(*v, target))
 			end
 			for k, v in info
 				target.__send__(k) unless v
@@ -121,11 +120,11 @@ class Injector
 
 	protected
 
-	def getRule(key, inherit=false)
+	def getRule(key, inherit=true)
 		return @ruleDict[key] unless inherit
 		injector = self
 		begin
-			rule = injector.getRule(key)
+			rule = injector.getRule(key, false)
 			return rule if rule
 			injector = injector.parent
 		end while injector
