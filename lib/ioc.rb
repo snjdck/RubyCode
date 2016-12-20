@@ -1,18 +1,15 @@
 class Array
 	def new
-		cls, *args = self
-		cls.new *args
+		type, *args = self
+		type.new *args
 	end
 end
 
 class Module
 	def inject(name, type=nil)
 		info = Injector.getInjectInfo(self)
-		if type
-			info[:"@#{name}"] = type
-		else
-			info[name] = nil
-		end
+		key = type ? :"@#{name}" : name
+		info[key] = type
 		name
 	end
 end
@@ -24,27 +21,31 @@ class InjectionTypeValue
 		@needInject = needInject
 	end
 	def getValue(injector, id)
-		if @needInject
-			@realInjector.injectInto(@value)
-			@needInject = false
-		end
-		@value
+		return @value unless @needInject
+		@needInject = false
+		@realInjector.injectInto(@value)
+	end
+end
+
+class InjectionTypeSingleton
+	def initialize(klass, realInjector)
+		@realInjector = realInjector
+		@klass = klass
+	end
+	def getValue(injector, id)
+		return @value if @value
+		@value = @klass.new
+		@realInjector.injectInto(@value)
 	end
 end
 
 class InjectionTypeClass
-	def initialize(cls, realInjector)
+	def initialize(klass, realInjector)
 		@realInjector = realInjector
-		@cls = cls
+		@klass = klass
 	end
 	def getValue(injector, id)
-		@realInjector.injectInto(@cls.new)
-	end
-end
-
-class InjectionTypeSingleton < InjectionTypeClass
-	def getValue(injector, id)
-		@val ||= super
+		@realInjector.injectInto(@klass.new)
 	end
 end
 
@@ -74,19 +75,19 @@ class Injector
 		@ruleDict.delete calcKey(type, id)
 	end
 
-	def mapValue(key, value, needInject=false, id:nil, realInjector:nil)
+	def mapValue(type, value, needInject=false, id:nil, realInjector:nil)
 		rule = InjectionTypeValue.new(value, needInject, realInjector || self)
-		mapRule(key, rule, id)
+		mapRule(type, rule, id)
 	end
 
-	def mapClass(key, value=nil, id:nil, realInjector:nil)
-		rule = InjectionTypeClass.new(value || key, realInjector || self)
-		mapRule(key, rule, id)
+	def mapClass(type, value=nil, id:nil, realInjector:nil)
+		rule = InjectionTypeClass.new(value || type, realInjector || self)
+		mapRule(type, rule, id)
 	end
 
-	def mapSingleton(key, value=nil, id:nil, realInjector:nil)
-		rule = InjectionTypeSingleton.new(value || key, realInjector || self)
-		mapRule(key, rule, id)
+	def mapSingleton(type, value=nil, id:nil, realInjector:nil)
+		rule = InjectionTypeSingleton.new(value || type, realInjector || self)
+		mapRule(type, rule, id)
 	end
 
 	def getInstance(type, id=nil)
