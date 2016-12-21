@@ -1,10 +1,3 @@
-class Array
-	def new
-		type, *args = self
-		type.new *args
-	end
-end
-
 class Module
 	def inject(name, type=nil, id=nil)
 		info = Injector.getInjectInfo(self)
@@ -15,42 +8,50 @@ class Module
 	end
 end
 
-class InjectionTypeValue
-	def initialize(value, needInject, realInjector)
-		@realInjector = realInjector
-		@value  = value
-		@needInject = needInject
-	end
-	def getValue(injector, id, target)
-		return @value unless @needInject
-		@needInject = false
-		@realInjector.injectInto(@value)
-	end
-end
-
-class InjectionTypeSingleton
-	def initialize(klass, realInjector)
-		@realInjector = realInjector
-		@klass = klass
-	end
-	def getValue(injector, id, target)
-		return @value if @value
-		@value = @klass.new
-		@realInjector.injectInto(@value)
-	end
-end
-
-class InjectionTypeClass
-	def initialize(klass, realInjector)
-		@realInjector = realInjector
-		@klass = klass
-	end
-	def getValue(injector, id, target)
-		@realInjector.injectInto(@klass.new)
-	end
-end
-
 class Injector
+	class InjectionTypeValue
+		def initialize(value, needInject, realInjector)
+			@realInjector = realInjector
+			@value  = value
+			@needInject = needInject
+		end
+		def call(injector, id, target)
+			return @value unless @needInject
+			@needInject = false
+			@realInjector.injectInto(@value)
+		end
+	end
+
+	class InjectionTypeClass
+		def initialize(klass, realInjector)
+			@realInjector = realInjector
+			@klass = klass
+		end
+		def call(injector, id, target)
+			@realInjector.injectInto(new @klass)
+		end
+		private
+		def new(type, args=nil)
+			case type.class
+			when Class then type.new  *args
+			when Proc  then type.call *args
+			when Array
+				type, *args = type
+				type = new type if Array === type
+				new type, args
+			else nil
+			end
+		end
+	end
+
+	class InjectionTypeSingleton < InjectionTypeClass
+		def call(injector, id, target)
+			return @value if @value
+			@value = new @klass
+			@realInjector.injectInto(@value)
+		end
+	end
+
 	@@InjectInfoDict = {}
 
 	def self.getInjectInfo(cls)
@@ -93,19 +94,15 @@ class Injector
 
 	def getInstance(type, id=nil, target=nil)
 		rule = getRule(calcKey(type, id)) || getRule(calcMetaKey(type))
-		return rule.getValue(self, id, target) if rule
+		rule.call(self, id, target) if rule
 	end
 
 	def injectInto(target)
-		for cls in target.class.ancestors
-			next unless info = @@InjectInfoDict[cls]
-			for k, v in info
-				next unless v
-				target.instance_variable_set(k, getInstance(*v, target))
-			end
-			for k, v in info
-				target.__send__(k) unless v
-			end
+		doInject(target) do |target, k, v|
+			target.instance_variable_set(k, getInstance(*v, target)) if v
+		end
+		doInject(target) do |target, k, v|
+			target.__send__(k) unless v
 		end
 		target
 	end
@@ -139,5 +136,12 @@ class Injector
 
 	def calcMetaKey(type)
 		return "#{type}@"
+	end
+
+	def doInject(target)
+		for cls in target.class.ancestors
+			next unless info = @@InjectInfoDict[cls]
+			info.each { |k, v| yield target, k, v }
+		end
 	end
 end
