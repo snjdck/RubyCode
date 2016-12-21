@@ -32,7 +32,7 @@ class Injector
 		end
 		private
 		def new(type, args=nil)
-			case type.class
+			case type
 			when Class then type.new  *args
 			when Proc  then type.call *args
 			when Array
