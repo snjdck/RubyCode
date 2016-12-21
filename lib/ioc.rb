@@ -130,12 +130,11 @@ class Injector
 	private
 
 	def calcKey(type, id)
-		return type.name if id.nil? || id.empty?
-		return "#{type}@#{id}"
+		(id.nil? || id.empty?) ? type.name : "#{type}@#{id}"
 	end
 
 	def calcMetaKey(type)
-		return "#{type}@"
+		"#{type}@"
 	end
 
 	def doInject(target)
