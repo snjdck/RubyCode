@@ -1,9 +1,9 @@
-require_relative '../lib/mvc'
+
 require_relative '../lib/packet'
 require_relative '../cfg/server'
 require_relative '../cfg/packet'
 
-class TestPlugin < Plugin
+class TestPlugin < MVC::Module
 	def initAllServices
 	end
 
