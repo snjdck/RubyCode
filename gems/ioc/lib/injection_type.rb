@@ -26,6 +26,8 @@ class Injector
 			return @value if @value
 			@value = new @klass
 			@realInjector.injectInto(@value)
+			@realInjector = @klass = nil
+			@value
 		end
 	end
 
@@ -39,6 +41,8 @@ class Injector
 			return @value unless @needInject
 			@needInject = false
 			@realInjector.injectInto(@value)
+			@realInjector = nil
+			@value
 		end
 	end
 end
