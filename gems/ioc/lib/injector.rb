@@ -1,6 +1,3 @@
-require_relative 'module'
-require_relative 'injection_type'
-
 class Injector
 	@@InjectInfoDict = {}
 

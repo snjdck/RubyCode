@@ -1,4 +1,4 @@
-require 'injector'
+require 'ioc'
 
 require_relative 'model'
 require_relative 'controller'

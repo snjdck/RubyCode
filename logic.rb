@@ -1,7 +1,7 @@
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'gems', 'ioc', 'lib'))
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'gems', 'mvc', 'lib'))
+for name in %w[ioc mvc]
+	$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'gems', name, 'lib'))
+end
 
-require 'injector'
 require 'mvc'
 
 require_relative 'lib/counter'
