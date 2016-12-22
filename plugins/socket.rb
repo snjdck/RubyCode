@@ -1,4 +1,4 @@
-require_relative '../lib/server'
+
 require_relative '../cfg/server'
 
 

@@ -1,4 +1,8 @@
-require_relative 'lib/server'
+for name in %w[ioc mvc reactor]
+	$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'gems', name, 'lib'))
+end
+
+require 'reactor'
 require_relative 'cfg/server'
 
 $client_dict = {}

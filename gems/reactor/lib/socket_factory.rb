@@ -1,5 +1,4 @@
 require 'socket'
-require_relative 'selector'
 
 class SocketServer < TCPServer
 	def initialize(host, port, handler)
