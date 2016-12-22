@@ -1,3 +1,3 @@
-require_relative 'module'
-require_relative 'injection_type'
-require_relative 'injector'
+require_relative 'ioc/module'
+require_relative 'ioc/injection_type'
+require_relative 'ioc/injector'

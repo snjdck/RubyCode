@@ -1,6 +1,6 @@
 require 'ioc'
 
-require_relative 'model'
-require_relative 'controller'
-require_relative 'application'
-require_relative 'module'
+require_relative 'mvc/model'
+require_relative 'mvc/controller'
+require_relative 'mvc/application'
+require_relative 'mvc/module'
