@@ -77,11 +77,18 @@ class Injector
 	private
 
 	def calcKey(type, id)
-		(id.nil? || id.empty?) ? type.to_s : "#{type}@#{id}"
+		checkType(type = type.to_s)
+		(id.nil? || id.empty?) ? type : "#{type}@#{id}"
 	end
 
 	def calcMetaKey(type)
+		checkType(type = type.to_s)
 		"#{type}@"
+	end
+
+	def checkType(type)
+		return unless type.include? '@'
+		raise "type<#{type}> can't include '@'!"
 	end
 
 	def doInject(target)

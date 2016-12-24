@@ -3,6 +3,7 @@ class Injector
 		def initialize(klass, realInjector)
 			@realInjector = realInjector
 			@klass = klass
+			verifyKlass
 		end
 		def call(injector, id, target)
 			@realInjector.injectInto(new @klass)
@@ -10,13 +11,22 @@ class Injector
 		private
 		def new(type, args=nil)
 			case type
-			when Class then type.new  *args
-			when Proc  then type.call *args
+			when Class
+				type.new  *args
+			when Proc, Method
+				type.call *args
 			when Array
 				type, *args = type
 				type = new type if Array === type
 				new type, args
 			else nil
+			end
+		end
+		def verifyKlass
+			case @klass
+			when Class, Proc, Method, Array
+			else
+				raise 'wrong argument type!'
 			end
 		end
 	end
