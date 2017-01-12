@@ -10,7 +10,7 @@ module WebSocket
 		KEY_TAIL = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 		def on_parse
-			if @has_upgrade then parse_data else parse_upgrade end
+			@has_upgrade ? parse_data : parse_upgrade
 		end
 
 		def parse_upgrade
@@ -34,44 +34,49 @@ module WebSocket
 			until _end - _begin < 2
 				byte1, byte2 = @buffer_recv.unpack('C2')
 
-				finFlag = byte1 >> 7 == 1
-				opCode = byte1 & 0xF
-				hasMask = byte2 >> 7 == 1
-				payloadLen = byte2 & 0x7F
+				hasMask = byte2 & 0x80 > 0
+				bodyLen = byte2 & 0x7F
 				
-				headLen = calcHeadLen(hasMask, payloadLen)
+				headLen = calcHeadLen(bodyLen, hasMask)
 				break if _end - _begin < headLen
-				payloadLen = readPayloadLen(payloadLen, _begin)
-				break if _end - _begin < headLen + payloadLen
+
+				bodyLen = readBodyLen(bodyLen, _begin)
+				break if _end - _begin < headLen + bodyLen
+
 				_begin += headLen
 
-				decodePayload(_begin, payloadLen) if hasMask
-				parsePayload(opCode, _begin, payloadLen)
+				decodeBody(_begin, bodyLen) if hasMask
 
-				_begin += payloadLen
+				opCode  = byte1 & 0xF
+				payload = parseBody(opCode, _begin, bodyLen)
+
+				_begin += bodyLen
+
+				finFlag = byte1 & 0x80 > 0
+				dispatch(finFlag, opCode, payload)
 			end
 			@buffer_recv[0, _begin] = '' if _begin > 0
 		end
 
-		def calcHeadLen(hasMask, payloadLen)
+		def calcHeadLen(bodyLen, hasMask)
 			(hasMask ? 4 : 0) + case
-			when payloadLen <  126 then 2
-			when payloadLen == 126 then 4
+			when bodyLen <  126 then 2
+			when bodyLen == 126 then 4
 			else 10 end
 		end
 
-		def readPayloadLen(payloadLen, offset)
-			if payloadLen < 126 then payloadLen
-			elsif payloadLen == 126
+		def readBodyLen(bodyLen, offset)
+			if bodyLen < 126 then bodyLen
+			elsif bodyLen == 126
 				@buffer_recv[offset+2, 2].unpack1('n')
 			else
 				@buffer_recv[offset+6, 4].unpack1('N')
 			end
 		end
 
-		def decodePayload(offset, payloadLen)
+		def decodeBody(offset, bodyLen)
 			mask = @buffer_recv[offset - 4, 4].unpack('C4')
-			payloadLen.times do |i|
+			bodyLen.times do |i|
 				index = offset + i
 				value = @buffer_recv[index].unpack1('C')
 				value ^= mask[i % 4]
@@ -79,13 +84,34 @@ module WebSocket
 			end
 		end
 
-		def parsePayload(opCode, offset, payloadLen)
+		def parseBody(opCode, offset, bodyLen)
 			case opCode
-			when 1, 2
-				on_packet @buffer_recv[offset, payloadLen]
+			when 0, 1, 2
+				@buffer_recv[offset, bodyLen]
 			when 8
 				@buffer_recv[offset, 2].unpack1('n')
-				close
+			end
+		end
+
+		def dispatch(finFlag, opCode, payload)
+			if finFlag
+				if opCode > 0
+					if opCode & 0x8 > 0
+						case opCode
+						when 8 then close
+						end
+					else
+						on_packet payload
+					end
+				else
+					@fragments << payload
+					on_packet @fragments.join('')
+					@fragments = nil
+				end
+			elsif opCode > 0
+				@fragments = [payload]
+			else
+				@fragments << payload
 			end
 		end
 	end
