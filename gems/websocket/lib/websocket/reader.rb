@@ -10,8 +10,7 @@ module WebSocket
 		KEY_TAIL = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 		def on_parse
-			if @has_upgrade then parse_data
-			else parse_upgrade end
+			if @has_upgrade then parse_data else parse_upgrade end
 		end
 
 		def parse_upgrade
@@ -31,10 +30,8 @@ module WebSocket
 		end
 
 		def parse_data
-			_begin = 0
-			_end = @buffer_recv.size
-			loop do
-				break if _end - _begin < 2
+			_begin, _end = 0, @buffer_recv.size
+			until _end - _begin < 2
 				byte1, byte2 = @buffer_recv.unpack('C2')
 
 				finFlag = byte1 >> 7 == 1
@@ -53,21 +50,14 @@ module WebSocket
 
 				_begin += payloadLen
 			end
-
 			@buffer_recv[0, _begin] = '' if _begin > 0
 		end
 
 		def calcHeadLen(hasMask, payloadLen)
-			headLen = 0
-			if payloadLen < 126
-				headLen = 2
-			elsif payloadLen == 126
-				headLen = 4
-			else
-				headLen = 10
-			end
-			headLen += 4 if hasMask
-			headLen
+			(hasMask ? 4 : 0) + case
+			when payloadLen <  126 then 2
+			when payloadLen == 126 then 4
+			else 10 end
 		end
 
 		def readPayloadLen(payloadLen, offset)
